@@ -3,7 +3,11 @@
 Palkeep is a Windows desktop control center for Palworld dedicated servers and
 single-player worlds.
 
-[Download the latest Windows release](https://github.com/AlphaNineGaming/Palkeep/releases/latest)
+[Download the latest Windows Beta](https://github.com/AlphaNineGaming/Palkeep/releases)
+
+Palkeep checks GitHub Releases when the desktop app starts. The installed
+version and Beta build are shown in the sidebar and About window, and a notice
+appears when a newer build is available.
 
 ## Modes
 

@@ -89,7 +89,28 @@ type LiveBridgeStatus = {
   players: string[];
   error: string | null;
 };
+type AppInfo = {
+  version: string;
+  build: string;
+  channel: string;
+  packaged: boolean;
+};
+type UpdateStatus = {
+  checked: boolean;
+  currentVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  prerelease: boolean;
+  releaseName: string | null;
+  releaseUrl: string | null;
+  downloadUrl: string | null;
+  publishedAt: string | null;
+  error: string | null;
+};
 type DesktopApi = {
+  getAppInfo: () => Promise<AppInfo>;
+  checkForUpdates: () => Promise<UpdateStatus>;
+  openUpdate: (url: string) => Promise<{ ok: boolean }>;
   getConfig: () => Promise<Config>;
   saveConfig: (config: Partial<Config>) => Promise<Config>;
   chooseServerFolder: () => Promise<string | null>;
@@ -170,7 +191,13 @@ const playerColors = [
   "#6f98b3",
   "#b6898f",
 ];
-const PALKEEP_VERSION = "0.6.4";
+const PALKEEP_VERSION = "0.6.5-beta.1";
+const DEFAULT_APP_INFO: AppInfo = {
+  version: PALKEEP_VERSION,
+  build: "beta.1",
+  channel: "Beta",
+  packaged: false,
+};
 const SUPPORT_LINKS = {
   donate: "https://ko-fi.com/E1W220NMPA",
   discord: "https://discord.gg/RQsVw2vyg",
@@ -293,7 +320,7 @@ function Mark() {
 function openSupportLink(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
-function SidebarSupport({ onAbout }: { onAbout: () => void }) {
+function SidebarSupport({ onAbout, appInfo }: { onAbout: () => void; appInfo: AppInfo }) {
   return (
     <div className="sidebar-support" aria-label="About and support">
       <button className="sidebar-about" onClick={onAbout}>
@@ -307,10 +334,23 @@ function SidebarSupport({ onAbout }: { onAbout: () => void }) {
         <span>♥</span>
         <b>Support the project</b>
       </button>
+      <small className="sidebar-build">
+        v{appInfo.version} · {appInfo.channel} build {appInfo.build}
+      </small>
     </div>
   );
 }
-function AboutDialog({ onClose }: { onClose: () => void }) {
+function AboutDialog({
+  onClose,
+  appInfo,
+  updateStatus,
+  onCheckUpdates,
+}: {
+  onClose: () => void;
+  appInfo: AppInfo;
+  updateStatus: UpdateStatus | null;
+  onCheckUpdates: () => void;
+}) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -338,13 +378,31 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
           <div>
             <p className="eyebrow">ABOUT THE WORKSHOP</p>
             <h2 id="about-title">Palkeep</h2>
-            <p className="about-version">SERVER COMMAND · VERSION {PALKEEP_VERSION}</p>
+            <p className="about-version">
+              SERVER COMMAND · VERSION {appInfo.version} · {appInfo.channel.toUpperCase()} BUILD {appInfo.build.toUpperCase()}
+            </p>
           </div>
         </div>
         <p className="about-intro">
           A focused desktop workshop for managing Palworld servers and single-player
           worlds, created and maintained by <b>AlphaNineGaming</b>.
         </p>
+        <div className={`about-update-status ${updateStatus?.updateAvailable ? "available" : ""}`}>
+          <span>{updateStatus?.updateAvailable ? "↑" : "✓"}</span>
+          <div>
+            <b>{updateStatus?.updateAvailable ? `Palkeep ${updateStatus.latestVersion} is available` : "Startup update check enabled"}</b>
+            <small>
+              {updateStatus?.error
+                ? "The last check could not reach GitHub. Palkeep will try again next launch."
+                : updateStatus?.updateAvailable
+                  ? "A newer Beta build is ready on GitHub."
+                  : updateStatus?.checked
+                    ? "You are running the newest published build."
+                    : "Palkeep checks GitHub Releases when the app starts."}
+            </small>
+          </div>
+          <button onClick={onCheckUpdates}>Check now</button>
+        </div>
         <div className="about-support-callout">
           <span>♥</span>
           <div>
@@ -377,6 +435,28 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
           and is not affiliated with or endorsed by Pocketpair.
         </p>
       </section>
+    </div>
+  );
+}
+function UpdateBanner({
+  status,
+  onOpen,
+  onDismiss,
+}: {
+  status: UpdateStatus | null;
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  if (!status?.updateAvailable) return null;
+  return (
+    <div className="update-banner" role="status">
+      <span>↑</span>
+      <div>
+        <b>{status.releaseName || `Palkeep ${status.latestVersion}`} is ready</b>
+        <small>You are using {status.currentVersion}. Download the newer {status.prerelease ? "Beta " : ""}build.</small>
+      </div>
+      <button onClick={onOpen}>View update ↗</button>
+      <button className="update-dismiss" aria-label="Dismiss update notice" onClick={onDismiss}>×</button>
     </div>
   );
 }
@@ -1077,9 +1157,19 @@ function WorldSettingsView({
 function SinglePlayerApp({
   api,
   onServer,
+  appInfo,
+  updateStatus,
+  onCheckUpdates,
+  onOpenUpdate,
+  onDismissUpdate,
 }: {
   api: DesktopApi | undefined;
   onServer: () => void;
+  appInfo: AppInfo;
+  updateStatus: UpdateStatus | null;
+  onCheckUpdates: () => void;
+  onOpenUpdate: () => void;
+  onDismissUpdate: () => void;
 }) {
   const [worlds, setWorlds] = useState<SingleWorld[]>([]);
   const [worldPath, setWorldPath] = useState("");
@@ -1383,6 +1473,7 @@ function SinglePlayerApp({
   }
   return (
     <main className="app-shell single-shell">
+      <UpdateBanner status={updateStatus} onOpen={onOpenUpdate} onDismiss={onDismissUpdate} />
       <aside className="sidebar">
         <div className="brand-row">
           <Mark />
@@ -1495,7 +1586,7 @@ function SinglePlayerApp({
             )}
           </div>
         </div>
-        <SidebarSupport onAbout={() => setAboutOpen(true)} />
+        <SidebarSupport onAbout={() => setAboutOpen(true)} appInfo={appInfo} />
       </aside>
       <section className="workspace">
         <header className="topbar">
@@ -1932,7 +2023,14 @@ function SinglePlayerApp({
           {toast.text}
         </div>
       )}
-      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {aboutOpen && (
+        <AboutDialog
+          onClose={() => setAboutOpen(false)}
+          appInfo={appInfo}
+          updateStatus={updateStatus}
+          onCheckUpdates={onCheckUpdates}
+        />
+      )}
     </main>
   );
 }
@@ -1959,6 +2057,9 @@ export default function Home() {
   );
   const [busy, setBusy] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [appInfo, setAppInfo] = useState<AppInfo>(DEFAULT_APP_INFO);
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
   const [activity, setActivity] = useState([
     {
       time: "Now",
@@ -1982,6 +2083,21 @@ export default function Home() {
     setToast({ text, error });
     window.setTimeout(() => setToast(null), 3200);
   }
+  const checkUpdates = useCallback(async () => {
+    if (!api) return;
+    const result = await api.checkForUpdates();
+    setUpdateStatus(result);
+  }, [api]);
+  const openUpdate = useCallback(async () => {
+    if (!api || !updateStatus?.releaseUrl) return;
+    await api.openUpdate(updateStatus.releaseUrl);
+  }, [api, updateStatus]);
+
+  useEffect(() => {
+    if (!api) return;
+    api.getAppInfo().then(setAppInfo).catch(() => undefined);
+    checkUpdates().catch(() => undefined);
+  }, [api, checkUpdates]);
   function openModal(kind: "item" | "pal" | "message", id = "") {
     setPresetId(id);
     setModal(kind);
@@ -2246,10 +2362,25 @@ export default function Home() {
   }
 
   if (mode === "single")
-    return <SinglePlayerApp api={api} onServer={() => setMode("server")} />;
+    return (
+      <SinglePlayerApp
+        api={api}
+        onServer={() => setMode("server")}
+        appInfo={appInfo}
+        updateStatus={updateDismissed ? null : updateStatus}
+        onCheckUpdates={checkUpdates}
+        onOpenUpdate={openUpdate}
+        onDismissUpdate={() => setUpdateDismissed(true)}
+      />
+    );
 
   return (
     <main className="app-shell">
+      <UpdateBanner
+        status={updateDismissed ? null : updateStatus}
+        onOpen={openUpdate}
+        onDismiss={() => setUpdateDismissed(true)}
+      />
       <aside className="sidebar">
         <div className="brand-row">
           <Mark />
@@ -2344,7 +2475,7 @@ export default function Home() {
             <span>→</span>
           </button>
         </div>
-        <SidebarSupport onAbout={() => setAboutOpen(true)} />
+        <SidebarSupport onAbout={() => setAboutOpen(true)} appInfo={appInfo} />
       </aside>
 
       <section className="workspace">
@@ -3094,7 +3225,14 @@ export default function Home() {
           {toast.text}
         </div>
       )}
-      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {aboutOpen && (
+        <AboutDialog
+          onClose={() => setAboutOpen(false)}
+          appInfo={appInfo}
+          updateStatus={updateStatus}
+          onCheckUpdates={checkUpdates}
+        />
+      )}
     </main>
   );
 }

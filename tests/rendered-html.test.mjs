@@ -78,3 +78,19 @@ test("keeps weapons complete and easy to discover", async () => {
   assert.match(page, /Category[\s\S]*catalogItemCategories\.map/);
   assert.match(page, /weapon weapons gun guns firearm firearms melee ranged/);
 });
+
+test("checks for Beta updates and displays the installed build", async () => {
+  const [page, main, preload, packageJson] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../electron/main.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../electron/preload.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(main, /api\.github\.com\/repos\/AlphaNineGaming\/Palkeep\/releases/);
+  assert.match(main, /ipcMain\.handle\("updates:check"/);
+  assert.match(preload, /checkForUpdates/);
+  assert.match(page, /Startup update check enabled/);
+  assert.match(page, /sidebar-build/);
+  assert.match(packageJson, /"version": "0\.6\.5-beta\.1"/);
+});

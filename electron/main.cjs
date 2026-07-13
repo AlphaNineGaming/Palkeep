@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, net, safeStorage, shell } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFile, spawn } = require("node:child_process");
@@ -6,6 +6,8 @@ const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 const LIVE_BRIDGE_VERSION = "0.2.0";
+const PALKEEP_BUILD = "beta.1";
+const RELEASES_API = "https://api.github.com/repos/AlphaNineGaming/Palkeep/releases?per_page=10";
 
 app.setName("Palkeep Server Command");
 app.setAppUserModelId("com.palkeep.servercommand");
@@ -24,6 +26,79 @@ const DEFAULT_CONFIG = {
 };
 
 let mainWindow = null;
+
+function appInfo() {
+  return {
+    version: app.getVersion(),
+    build: PALKEEP_BUILD,
+    channel: "Beta",
+    packaged: app.isPackaged,
+  };
+}
+
+function parsedVersion(value) {
+  const clean = String(value || "").trim().replace(/^v/i, "");
+  const [number, prerelease = ""] = clean.split("-", 2);
+  const parts = number.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  return { parts: [parts[0] || 0, parts[1] || 0, parts[2] || 0], prerelease };
+}
+
+function compareVersions(left, right) {
+  const a = parsedVersion(left);
+  const b = parsedVersion(right);
+  for (let index = 0; index < 3; index += 1) {
+    if (a.parts[index] !== b.parts[index]) return a.parts[index] > b.parts[index] ? 1 : -1;
+  }
+  if (a.prerelease === b.prerelease) return 0;
+  if (!a.prerelease) return 1;
+  if (!b.prerelease) return -1;
+  return a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true });
+}
+
+async function checkForUpdates() {
+  const current = app.getVersion();
+  try {
+    const response = await net.fetch(RELEASES_API, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": `Palkeep/${current}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}.`);
+    const releases = await response.json();
+    const published = releases.filter((release) => !release.draft && release.tag_name);
+    published.sort((a, b) => compareVersions(b.tag_name, a.tag_name));
+    const latest = published[0];
+    if (!latest) throw new Error("No published Palkeep releases were found.");
+    const installer = (latest.assets || []).find((asset) => /setup.*\.exe$/i.test(asset.name)) || latest.assets?.[0];
+    return {
+      checked: true,
+      currentVersion: current,
+      latestVersion: String(latest.tag_name).replace(/^v/i, ""),
+      updateAvailable: compareVersions(latest.tag_name, current) > 0,
+      prerelease: Boolean(latest.prerelease),
+      releaseName: latest.name || latest.tag_name,
+      releaseUrl: latest.html_url,
+      downloadUrl: installer?.browser_download_url || latest.html_url,
+      publishedAt: latest.published_at || null,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      checked: true,
+      currentVersion: current,
+      latestVersion: null,
+      updateAvailable: false,
+      prerelease: false,
+      releaseName: null,
+      releaseUrl: null,
+      downloadUrl: null,
+      publishedAt: null,
+      error: error.message || "Could not check for updates.",
+    };
+  }
+}
 
 function userFile(name) {
   return path.join(app.getPath("userData"), name);
@@ -475,6 +550,16 @@ async function runAction(action = {}) {
 }
 
 ipcMain.handle("config:get", () => publicConfig());
+ipcMain.handle("app:info", () => appInfo());
+ipcMain.handle("updates:check", () => checkForUpdates());
+ipcMain.handle("updates:open", async (_event, url) => {
+  const target = String(url || "");
+  if (!/^https:\/\/github\.com\/AlphaNineGaming\/Palkeep\/releases(?:\/|$)/i.test(target)) {
+    throw new Error("Blocked an untrusted update URL.");
+  }
+  await shell.openExternal(target);
+  return { ok: true };
+});
 ipcMain.handle("config:save", (_event, config) => writeConfig(config));
 ipcMain.handle("connection:test", () => liveSnapshot());
 ipcMain.handle("live:snapshot", () => liveSnapshot());

@@ -1,6 +1,6 @@
 {
   "name": "palkeep-server-command",
-  "version": "0.6.4",
+  "version": "0.6.5-beta.1",
   "description": "Palkeep desktop control center for Palworld dedicated servers.",
   "author": "AlphaNineGaming",
   "repository": {

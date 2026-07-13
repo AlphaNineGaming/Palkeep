@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("palkeepDesktop", {
   desktop: true,
+  getAppInfo: () => ipcRenderer.invoke("app:info"),
+  checkForUpdates: () => ipcRenderer.invoke("updates:check"),
+  openUpdate: (url) => ipcRenderer.invoke("updates:open", url),
   getConfig: () => ipcRenderer.invoke("config:get"),
   saveConfig: (config) => ipcRenderer.invoke("config:save", config),
   chooseServerFolder: () => ipcRenderer.invoke("server:choose-folder"),
