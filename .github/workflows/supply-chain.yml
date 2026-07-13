@@ -33,7 +33,9 @@ jobs:
 
       - name: Reconstruct native runtime from pinned sources
         shell: powershell
-        run: ./scripts/prepare-single-player.ps1 -BuildPython python -Force
+        run: |
+          ./scripts/prepare-single-player.ps1 -BuildPython python -Force
+          ./scripts/prepare-live-bridge.ps1 -Force
 
       - name: Verify provenance, checksums, signatures, and native imports
         shell: powershell
@@ -58,5 +60,8 @@ jobs:
             single-player/runtime/**
             single-player/vendor/palworld_save_tools/lib/windows/ooz.pyd
             single-player/runtime-manifest.json
+            live-bridge/runtime/dwmapi.dll
+            live-bridge/runtime/ue4ss/UE4SS.dll
+            live-bridge/runtime-manifest.json
           if-no-files-found: error
           retention-days: 7

@@ -1,6 +1,6 @@
 {
   "name": "palkeep-server-command",
-  "version": "0.6.5-beta.3",
+  "version": "0.6.5-beta.4",
   "description": "Palkeep desktop control center for Palworld dedicated servers.",
   "author": "AlphaNineGaming",
   "repository": {
@@ -23,8 +23,10 @@
     "desktop:build-ui": "vite build --config desktop/vite.config.ts",
     "desktop:run": "npm run desktop:build-ui && electron .",
     "prepare:single-player": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-single-player.ps1",
+    "prepare:live-bridge": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-live-bridge.ps1",
+    "prepare:native": "npm run prepare:single-player && npm run prepare:live-bridge",
     "verify:supply-chain": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-supply-chain.ps1",
-    "build:win": "npm run prepare:single-player && npm run verify:supply-chain && npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
+    "build:win": "npm run prepare:native && npm run verify:supply-chain && npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

@@ -6,7 +6,7 @@ const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 const LIVE_BRIDGE_VERSION = "0.2.0";
-const PALKEEP_BUILD = "beta.3";
+const PALKEEP_BUILD = "beta.4";
 const RELEASES_API = "https://api.github.com/repos/AlphaNineGaming/Palkeep/releases?per_page=10";
 
 app.setName("Palkeep Server Command");

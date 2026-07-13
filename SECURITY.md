@@ -18,6 +18,12 @@ The generated `single-player/runtime-manifest.json` records the source commits
 and SHA-256 digest of every generated native file. It is included in packaged
 builds but generated files are not committed to the repository.
 
+The optional live bridge uses the Palworld-specific UE4SS build published by
+Okaetsu. Its upstream GitHub release asset and both extracted DLLs are pinned by
+SHA-256 in `dependencies.lock.json`. The DLLs are reconstructed during the
+build and are not stored in the source tree. Generated bridge provenance is
+recorded in `live-bridge/runtime-manifest.json`.
+
 ## Local data boundary
 
 The single-player helper operates as a separate local process. Its readable

@@ -92,7 +92,7 @@ test("checks for Beta updates and displays the installed build", async () => {
   assert.match(preload, /checkForUpdates/);
   assert.match(page, /Startup update check enabled/);
   assert.match(page, /sidebar-build/);
-  assert.match(packageJson, /"version": "0\.6\.5-beta\.3"/);
+  assert.match(packageJson, /"version": "0\.6\.5-beta\.4"/);
 });
 
 test("ships an easy guide with prominent live bridge activation steps", async () => {
@@ -127,7 +127,9 @@ test("documents and enforces source-built single-player dependencies", async () 
   assert.match(prepare, /Get-AuthenticodeSignature/);
   assert.match(prepare, /--require-hashes/);
   assert.match(prepare, /pip[\s\S]*wheel[\s\S]*--no-build-isolation/);
-  assert.match(verify, /Native files are tracked in single-player/);
+  assert.match(verify, /Native files are tracked in source directories/);
   assert.match(security, /not yet Authenticode-signed/);
   assert.match(ignore, /single-player\/runtime\/\*\.dll/);
+  assert.match(lock.ue4ssPalworld.assetSha256, /^[a-f0-9]{64}$/);
+  assert.match(ignore, /live-bridge\/runtime\/dwmapi\.dll/);
 });

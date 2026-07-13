@@ -49,6 +49,10 @@ Oodle-compatible module from pinned source commits. CI verifies signatures,
 hashes, imports, and the no-binaries-in-source policy before packaging. See
 [SECURITY.md](SECURITY.md) and [dependencies.lock.json](dependencies.lock.json).
 
+The same policy applies to the optional live bridge: its two UE4SS loader DLLs
+are reconstructed from a checksum-pinned upstream Palworld release and verified
+before packaging.
+
 ## Community and support
 
 Palkeep is created and maintained by **AlphaNineGaming**.
