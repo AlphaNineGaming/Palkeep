@@ -49,3 +49,14 @@ jobs:
           path: single-player/runtime-manifest.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload verified single-player runtime for packaging
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-single-player-runtime
+          path: |
+            single-player/runtime/**
+            single-player/vendor/palworld_save_tools/lib/windows/ooz.pyd
+            single-player/runtime-manifest.json
+          if-no-files-found: error
+          retention-days: 7

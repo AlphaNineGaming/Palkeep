@@ -92,7 +92,7 @@ test("checks for Beta updates and displays the installed build", async () => {
   assert.match(preload, /checkForUpdates/);
   assert.match(page, /Startup update check enabled/);
   assert.match(page, /sidebar-build/);
-  assert.match(packageJson, /"version": "0\.6\.5-beta\.2"/);
+  assert.match(packageJson, /"version": "0\.6\.5-beta\.3"/);
 });
 
 test("ships an easy guide with prominent live bridge activation steps", async () => {
