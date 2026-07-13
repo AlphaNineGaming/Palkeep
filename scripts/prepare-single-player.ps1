@@ -99,7 +99,7 @@ if ($mustBuildNative) {
 }
 
 $nativeFiles = @(
-  Get-ChildItem -LiteralPath $runtime -File | Where-Object { $_.Extension -in ".dll", ".exe", ".pyd", ".zip", ".cat" }
+  Get-ChildItem -LiteralPath $runtime -File | Where-Object { $_.Name -ne "README.md" }
   Get-Item -LiteralPath $native
 )
 $fileRecords = foreach ($file in $nativeFiles) {

@@ -55,6 +55,7 @@ __pycache__/
 /single-player/runtime/*.zip
 /single-player/runtime/*.cat
 /single-player/runtime/python312._pth
+/single-player/runtime/__install__.json
 /single-player/runtime-manifest.json
 /single-player/vendor/palworld_save_tools/lib/*
 !/single-player/vendor/palworld_save_tools/lib/README.md
