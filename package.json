@@ -1,0 +1,97 @@
+{
+  "name": "palkeep-server-command",
+  "version": "0.6.4",
+  "description": "Palkeep desktop control center for Palworld dedicated servers.",
+  "author": "AlphaNineGaming",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlphaNineGaming/Palkeep.git"
+  },
+  "homepage": "https://github.com/AlphaNineGaming/Palkeep",
+  "main": "electron/main.cjs",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "db:generate": "drizzle-kit generate",
+    "desktop:build-ui": "vite build --config desktop/vite.config.ts",
+    "desktop:run": "npm run desktop:build-ui && electron .",
+    "build:win": "npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "electron": "38.3.0",
+    "electron-builder": "26.0.12",
+    "react-server-dom-webpack": "19.2.6",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "type": "module",
+  "build": {
+    "appId": "com.palkeep.servercommand",
+    "productName": "Palkeep Server Command",
+    "artifactName": "Palkeep-Server-Command-Setup-${version}.${ext}",
+    "asar": false,
+    "directories": {
+      "output": "installer-output"
+    },
+    "files": [
+      "desktop-dist/**",
+      "electron/**",
+      "single-player/**",
+      "live-bridge/**",
+      "build/icon.png",
+      "bridge/README.md",
+      "THIRD_PARTY_NOTICES.txt",
+      "package.json",
+      "!installer-output/**",
+      "!work/**"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis"
+      ],
+      "compression": "store",
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "packElevateHelper": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "Palkeep-Server-Command-Portable-${version}.${ext}",
+      "requestExecutionLevel": "user"
+    }
+  }
+}
