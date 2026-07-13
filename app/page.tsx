@@ -191,14 +191,15 @@ const playerColors = [
   "#6f98b3",
   "#b6898f",
 ];
-const PALKEEP_VERSION = "0.6.5-beta.1";
+const PALKEEP_VERSION = "0.6.5-beta.2";
 const DEFAULT_APP_INFO: AppInfo = {
   version: PALKEEP_VERSION,
-  build: "beta.1",
+  build: "beta.2",
   channel: "Beta",
   packaged: false,
 };
 const SUPPORT_LINKS = {
+  guide: "https://github.com/AlphaNineGaming/Palkeep/blob/main/USER_GUIDE.md",
   donate: "https://ko-fi.com/E1W220NMPA",
   discord: "https://discord.gg/RQsVw2vyg",
   youtube: "https://www.youtube.com/@AlphanineGaming",
@@ -387,6 +388,11 @@ function AboutDialog({
           A focused desktop workshop for managing Palworld servers and single-player
           worlds, created and maintained by <b>AlphaNineGaming</b>.
         </p>
+        <button className="about-guide-button" onClick={() => openSupportLink(SUPPORT_LINKS.guide)}>
+          <span>?</span>
+          <span><b>Easy user guide</b><small>Setup, live bridge activation, and troubleshooting</small></span>
+          <em>Read guide ↗</em>
+        </button>
         <div className={`about-update-status ${updateStatus?.updateAvailable ? "available" : ""}`}>
           <span>{updateStatus?.updateAvailable ? "↑" : "✓"}</span>
           <div>

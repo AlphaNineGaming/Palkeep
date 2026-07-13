@@ -5,6 +5,9 @@ single-player worlds.
 
 [Download the latest Windows Beta](https://github.com/AlphaNineGaming/Palkeep/releases)
 
+**New to Palkeep?** Read the [easy user guide](USER_GUIDE.md), including the
+step-by-step instructions for activating the single-player live bridge.
+
 Palkeep checks GitHub Releases when the desktop app starts. The installed
 version and Beta build are shown in the sidebar and About window, and a notice
 appears when a newer build is available.

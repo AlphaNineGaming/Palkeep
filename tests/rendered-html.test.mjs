@@ -92,5 +92,21 @@ test("checks for Beta updates and displays the installed build", async () => {
   assert.match(preload, /checkForUpdates/);
   assert.match(page, /Startup update check enabled/);
   assert.match(page, /sidebar-build/);
-  assert.match(packageJson, /"version": "0\.6\.5-beta\.1"/);
+  assert.match(packageJson, /"version": "0\.6\.5-beta\.2"/);
+});
+
+test("ships an easy guide with prominent live bridge activation steps", async () => {
+  const [guide, page, readme] = await Promise.all([
+    readFile(new URL("../USER_GUIDE.md", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../README.md", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(guide, /Activate the live bridge/);
+  assert.match(guide, /Close Palworld completely/);
+  assert.match(guide, /Enable live delivery/);
+  assert.match(guide, /Live delivery ready/);
+  assert.match(guide, /If the bridge does not become ready/);
+  assert.match(page, /Easy user guide/);
+  assert.match(readme, /easy user guide/);
 });
