@@ -22,7 +22,9 @@
     "db:generate": "drizzle-kit generate",
     "desktop:build-ui": "vite build --config desktop/vite.config.ts",
     "desktop:run": "npm run desktop:build-ui && electron .",
-    "build:win": "npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
+    "prepare:single-player": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-single-player.ps1",
+    "verify:supply-chain": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-supply-chain.ps1",
+    "build:win": "npm run prepare:single-player && npm run verify:supply-chain && npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

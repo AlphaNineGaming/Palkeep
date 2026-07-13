@@ -110,3 +110,24 @@ test("ships an easy guide with prominent live bridge activation steps", async ()
   assert.match(page, /Easy user guide/);
   assert.match(readme, /easy user guide/);
 });
+
+test("documents and enforces source-built single-player dependencies", async () => {
+  const [lockRaw, prepare, verify, security, ignore] = await Promise.all([
+    readFile(new URL("../dependencies.lock.json", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/prepare-single-player.ps1", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/verify-supply-chain.ps1", import.meta.url), "utf8"),
+    readFile(new URL("../SECURITY.md", import.meta.url), "utf8"),
+    readFile(new URL("../.gitignore", import.meta.url), "utf8"),
+  ]);
+  const lock = JSON.parse(lockRaw);
+
+  assert.equal(lock.python.version, "3.12.10");
+  assert.match(lock.python.sha256, /^[a-f0-9]{64}$/);
+  assert.match(lock.pyooz.commit, /^[a-f0-9]{40}$/);
+  assert.match(prepare, /Get-AuthenticodeSignature/);
+  assert.match(prepare, /--require-hashes/);
+  assert.match(prepare, /pip[\s\S]*wheel[\s\S]*--no-build-isolation/);
+  assert.match(verify, /Native files are tracked in single-player/);
+  assert.match(security, /not yet Authenticode-signed/);
+  assert.match(ignore, /single-player\/runtime\/\*\.dll/);
+});

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "python": {
+    "version": "3.12.10",
+    "architecture": "amd64",
+    "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embeddable-amd64.zip",
+    "sha256": "156c7eea90d58cd7e91a23f28a0056616b13e9f4cf4901b7b99b837b7848c6da",
+    "publisher": "Python Software Foundation"
+  },
+  "pyooz": {
+    "repository": "https://github.com/MRHRTZ/pyooz.git",
+    "commit": "2973bcf022269206ffd9f7741ec889013a48acbc",
+    "oozCommit": "b938f47dd2e7ade6a503993ab30e0cde734bbd47",
+    "simdeCommit": "dd0b662fd8cf4b1617dbbb4d08aa053e512b08e4",
+    "license": "GPL-3.0-or-later"
+  },
+  "pythonBuildTools": {
+    "setuptools": "75.8.2",
+    "setuptoolsSha256": "558e47c15f1811c1fa7adbd0096669bf76c1d3f433f58324df69f3f5ecac4e8f",
+    "wheel": "0.45.1",
+    "wheelSha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"
+  },
+  "palworldSaveTools": {
+    "upstream": "https://github.com/cheahjs/palworld-save-tools",
+    "baseVersion": "v0.24.0",
+    "baseCommit": "7dc2c72a5d15948ca5f52e000981e18b3404e3b9",
+    "note": "The readable vendored source is a Palkeep-maintained fork with Palworld 1.0/Oodle support. Its complete changes are reviewable in this repository."
+  }
+}

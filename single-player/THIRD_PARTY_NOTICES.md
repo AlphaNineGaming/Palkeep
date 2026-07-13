@@ -1,7 +1,10 @@
 # Palkeep single-player engine notices
 
-This folder contains a bundled Python runtime and save-format components so
-Palkeep can edit local saves without requiring a separate installation.
+Release packages contain a Python runtime and native save-format component so
+Palkeep can edit local saves without requiring a separate installation. Native
+binaries are not committed to the source repository. They are reconstructed by
+`scripts/prepare-single-player.ps1` from the pinned sources and checksums in
+`dependencies.lock.json`.
 
 - Python 3.12.10 is distributed under the Python Software Foundation License.
   Its license is included as `runtime/LICENSE.txt`.
@@ -12,6 +15,9 @@ Palkeep can edit local saves without requiring a separate installation.
 - The bundled `ooz`/`pyooz` compression binding is distributed under
   GPL-3.0-or-later. Source is available from
   https://github.com/MRHRTZ/pyooz and https://github.com/MRHRTZ/ooz.
+
+Each generated release runtime includes `runtime-manifest.json`, containing the
+source commits and SHA-256 digest of every generated native file.
 
 Palkeep uses this engine only as a separate local helper process. No save data
 is uploaded or transmitted.

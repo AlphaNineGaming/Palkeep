@@ -1,0 +1,51 @@
+name: Supply-chain verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruct-and-test:
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Set up Python build interpreter
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: 3.12.10
+          architecture: x64
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Reconstruct native runtime from pinned sources
+        shell: powershell
+        run: ./scripts/prepare-single-player.ps1 -BuildPython python -Force
+
+      - name: Verify provenance, checksums, signatures, and native imports
+        shell: powershell
+        run: ./scripts/verify-supply-chain.ps1
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Upload generated provenance manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: single-player-runtime-provenance
+          path: single-player/runtime-manifest.json
+          if-no-files-found: error
+          retention-days: 30

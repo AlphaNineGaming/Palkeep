@@ -46,3 +46,16 @@ next-env.d.ts
 /build/.icon-ico/
 __pycache__/
 *.py[cod]
+
+# Reconstructed by scripts/prepare-single-player.ps1. Native binaries do not
+# belong in source control; release builds create them from pinned sources.
+/single-player/runtime/*.dll
+/single-player/runtime/*.exe
+/single-player/runtime/*.pyd
+/single-player/runtime/*.zip
+/single-player/runtime/*.cat
+/single-player/runtime/python312._pth
+/single-player/runtime-manifest.json
+/single-player/vendor/palworld_save_tools/lib/*
+!/single-player/vendor/palworld_save_tools/lib/README.md
+/.supply-chain-cache/
