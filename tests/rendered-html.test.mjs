@@ -96,11 +96,22 @@ test("checks for Beta updates and displays the installed build", async () => {
   ]);
 
   assert.match(main, /api\.github\.com\/repos\/AlphaNineGaming\/Palkeep\/releases/);
+  assert.match(main, /require\("electron-updater"\)/);
+  assert.match(main, /autoUpdater\.autoDownload = true/);
+  assert.match(main, /autoUpdater\.autoInstallOnAppQuit = true/);
+  assert.match(main, /autoUpdater\.quitAndInstall/);
   assert.match(main, /ipcMain\.handle\("updates:check"/);
+  assert.match(main, /ipcMain\.handle\("updates:install"/);
   assert.match(preload, /checkForUpdates/);
-  assert.match(page, /Startup update check enabled/);
+  assert.match(preload, /onUpdateStatus/);
+  assert.match(preload, /installUpdate/);
+  assert.match(page, /Automatic updates enabled/);
+  assert.match(page, /Downloading automatically/);
+  assert.match(page, /Restart to install now/);
   assert.match(page, /sidebar-build/);
   assert.match(packageJson, /"version": "0\.6\.6-beta"/);
+  assert.match(packageJson, /"electron-updater": "6\.8\.9"/);
+  assert.match(packageJson, /"provider": "github"/);
 });
 
 test("ships an easy guide with prominent live bridge activation steps", async () => {

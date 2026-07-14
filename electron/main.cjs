@@ -3,11 +3,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
+const { autoUpdater } = require("electron-updater");
 
 const execFileAsync = promisify(execFile);
 const LIVE_BRIDGE_VERSION = "0.2.0";
 const PALKEEP_BUILD = "beta";
 const RELEASES_API = "https://api.github.com/repos/AlphaNineGaming/Palkeep/releases?per_page=10";
+const RELEASES_PAGE = "https://github.com/AlphaNineGaming/Palkeep/releases";
 
 app.setName("Palkeep Server Command");
 app.setAppUserModelId("com.palkeep.servercommand");
@@ -26,6 +28,121 @@ const DEFAULT_CONFIG = {
 };
 
 let mainWindow = null;
+let updaterConfigured = false;
+let updateReadyPromptShown = false;
+let updaterState = {
+  checked: false,
+  currentVersion: app.getVersion(),
+  latestVersion: null,
+  updateAvailable: false,
+  prerelease: true,
+  releaseName: null,
+  releaseUrl: RELEASES_PAGE,
+  downloadUrl: null,
+  publishedAt: null,
+  phase: "idle",
+  percent: null,
+  error: null,
+};
+
+function releaseUrl(version) {
+  const clean = String(version || "").replace(/^v/i, "");
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(clean)
+    ? `${RELEASES_PAGE}/tag/v${clean}`
+    : RELEASES_PAGE;
+}
+
+function publishUpdaterState(patch = {}) {
+  updaterState = { ...updaterState, ...patch, currentVersion: app.getVersion() };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("updates:status", updaterState);
+  }
+  return updaterState;
+}
+
+function updateInfoPatch(info = {}) {
+  const version = String(info.version || "").replace(/^v/i, "") || null;
+  return {
+    latestVersion: version,
+    prerelease: version ? version.includes("-") : true,
+    releaseName: version ? `Palkeep ${version}` : null,
+    releaseUrl: releaseUrl(version),
+    publishedAt: info.releaseDate || null,
+  };
+}
+
+function configureAutoUpdater() {
+  if (updaterConfigured || !app.isPackaged) return;
+  updaterConfigured = true;
+  autoUpdater.allowPrerelease = true;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    publishUpdaterState({ checked: false, phase: "checking", percent: null, error: null });
+  });
+  autoUpdater.on("update-available", (info) => {
+    publishUpdaterState({
+      ...updateInfoPatch(info),
+      checked: true,
+      updateAvailable: true,
+      phase: "available",
+      percent: 0,
+      error: null,
+    });
+  });
+  autoUpdater.on("update-not-available", (info) => {
+    publishUpdaterState({
+      ...updateInfoPatch(info),
+      checked: true,
+      updateAvailable: false,
+      phase: "not-available",
+      percent: null,
+      error: null,
+    });
+  });
+  autoUpdater.on("download-progress", (progress) => {
+    publishUpdaterState({
+      checked: true,
+      updateAvailable: true,
+      phase: "downloading",
+      percent: Math.max(0, Math.min(100, Number(progress.percent) || 0)),
+      error: null,
+    });
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    publishUpdaterState({
+      ...updateInfoPatch(info),
+      checked: true,
+      updateAvailable: true,
+      phase: "downloaded",
+      percent: 100,
+      error: null,
+    });
+    if (updateReadyPromptShown || !mainWindow) return;
+    updateReadyPromptShown = true;
+    dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "Palkeep update ready",
+      message: `Palkeep ${info.version} has been downloaded.`,
+      detail: "Restart Palkeep now to install the update, or choose Later to install automatically when the app closes.",
+      buttons: ["Restart and install", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall(false, true);
+    }).catch(() => undefined);
+  });
+  autoUpdater.on("error", (error) => {
+    publishUpdaterState({
+      checked: true,
+      phase: "error",
+      percent: null,
+      error: error.message || "Automatic update failed.",
+    });
+  });
+}
 
 function appInfo() {
   return {
@@ -57,6 +174,21 @@ function compareVersions(left, right) {
 
 async function checkForUpdates() {
   const current = app.getVersion();
+  if (app.isPackaged) {
+    configureAutoUpdater();
+    try {
+      publishUpdaterState({ checked: false, phase: "checking", percent: null, error: null });
+      await autoUpdater.checkForUpdates();
+      return updaterState;
+    } catch (error) {
+      return publishUpdaterState({
+        checked: true,
+        phase: "error",
+        percent: null,
+        error: error.message || "Automatic update failed.",
+      });
+    }
+  }
   try {
     const response = await net.fetch(RELEASES_API, {
       headers: {
@@ -82,6 +214,8 @@ async function checkForUpdates() {
       releaseUrl: latest.html_url,
       downloadUrl: installer?.browser_download_url || latest.html_url,
       publishedAt: latest.published_at || null,
+      phase: compareVersions(latest.tag_name, current) > 0 ? "available" : "not-available",
+      percent: null,
       error: null,
     };
   } catch (error) {
@@ -95,6 +229,8 @@ async function checkForUpdates() {
       releaseUrl: null,
       downloadUrl: null,
       publishedAt: null,
+      phase: "error",
+      percent: null,
       error: error.message || "Could not check for updates.",
     };
   }
@@ -565,6 +701,13 @@ async function runAction(action = {}) {
 ipcMain.handle("config:get", () => publicConfig());
 ipcMain.handle("app:info", () => appInfo());
 ipcMain.handle("updates:check", () => checkForUpdates());
+ipcMain.handle("updates:install", () => {
+  if (!app.isPackaged || updaterState.phase !== "downloaded") {
+    throw new Error("The update has not finished downloading yet.");
+  }
+  setImmediate(() => autoUpdater.quitAndInstall(false, true));
+  return { ok: true };
+});
 ipcMain.handle("updates:open", async (_event, url) => {
   const target = String(url || "");
   if (!/^https:\/\/github\.com\/AlphaNineGaming\/Palkeep\/releases(?:\/|$)/i.test(target)) {
@@ -677,7 +820,10 @@ else {
     mainWindow.show();
     mainWindow.focus();
   });
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    configureAutoUpdater();
+    createWindow();
+  });
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   app.on("window-all-closed", () => app.quit());
 }

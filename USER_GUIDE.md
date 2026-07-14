@@ -12,6 +12,16 @@ how to activate live item delivery.
 - Use the bridge only with your own local game or a server you are authorized
   to manage.
 
+## Palkeep application updates
+
+Palkeep checks for newer Beta releases every time it starts. When an update is
+available, it downloads in the background and shows its progress at the top of
+the window. Choose **Restart and install** when prompted, or close Palkeep and
+the downloaded update will install automatically.
+
+Versions older than 0.6.6 Beta only detect releases and cannot install them.
+Install 0.6.6 Beta manually once to enable automatic updates for future builds.
+
 ## Quick start: single player
 
 1. Install and open Palkeep.

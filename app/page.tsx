@@ -105,11 +105,15 @@ type UpdateStatus = {
   releaseUrl: string | null;
   downloadUrl: string | null;
   publishedAt: string | null;
+  phase: "idle" | "checking" | "available" | "downloading" | "downloaded" | "not-available" | "error";
+  percent: number | null;
   error: string | null;
 };
 type DesktopApi = {
   getAppInfo: () => Promise<AppInfo>;
   checkForUpdates: () => Promise<UpdateStatus>;
+  installUpdate: () => Promise<{ ok: boolean }>;
+  onUpdateStatus: (callback: (status: UpdateStatus) => void) => () => void;
   openUpdate: (url: string) => Promise<{ ok: boolean }>;
   getConfig: () => Promise<Config>;
   saveConfig: (config: Partial<Config>) => Promise<Config>;
@@ -454,15 +458,27 @@ function AboutDialog({
         <div className={`about-update-status ${updateStatus?.updateAvailable ? "available" : ""}`}>
           <span>{updateStatus?.updateAvailable ? "↑" : "✓"}</span>
           <div>
-            <b>{updateStatus?.updateAvailable ? `Palkeep ${updateStatus.latestVersion} is available` : "Startup update check enabled"}</b>
+            <b>
+              {updateStatus?.phase === "downloaded"
+                ? `Palkeep ${updateStatus.latestVersion} is ready to install`
+                : updateStatus?.phase === "downloading"
+                  ? `Downloading Palkeep ${updateStatus.latestVersion}`
+                  : updateStatus?.updateAvailable
+                    ? `Palkeep ${updateStatus.latestVersion} is available`
+                    : "Automatic updates enabled"}
+            </b>
             <small>
               {updateStatus?.error
-                ? "The last check could not reach GitHub. Palkeep will try again next launch."
-                : updateStatus?.updateAvailable
-                  ? "A newer Beta build is ready on GitHub."
-                  : updateStatus?.checked
-                    ? "You are running the newest published build."
-                    : "Palkeep checks GitHub Releases when the app starts."}
+                ? "The automatic update could not complete. Palkeep will try again next launch."
+                : updateStatus?.phase === "downloaded"
+                  ? "Restart to install now, or close Palkeep to install automatically."
+                  : updateStatus?.phase === "downloading"
+                    ? `${Math.round(updateStatus.percent || 0)}% downloaded in the background.`
+                    : updateStatus?.updateAvailable
+                      ? "A newer Beta build will download automatically."
+                      : updateStatus?.checked
+                        ? "You are running the newest published build."
+                        : "Palkeep checks, downloads, and prepares Beta updates at startup."}
             </small>
           </div>
           <button onClick={onCheckUpdates}>Check now</button>
@@ -512,12 +528,20 @@ function UpdateBanner({
   onDismiss: () => void;
 }) {
   if (!status?.updateAvailable) return null;
+  const downloaded = status.phase === "downloaded";
+  const downloading = status.phase === "downloading" || (status.phase === "available" && status.percent !== null);
   return (
     <div className="update-banner" role="status">
       <span>↑</span>
       <div>
         <b>{status.releaseName || `Palkeep ${status.latestVersion}`} is ready</b>
-        <small>You are using {status.currentVersion}. Download the newer {status.prerelease ? "Beta " : ""}build.</small>
+        <small>
+          {downloaded
+            ? "Download complete. Restart Palkeep to install it now."
+            : downloading
+              ? `Downloading automatically${status.percent !== null ? ` - ${Math.round(status.percent)}%` : ""}.`
+              : `You are using ${status.currentVersion}. A newer ${status.prerelease ? "Beta " : ""}build is available.`}
+        </small>
       </div>
       <button onClick={onOpen}>View update ↗</button>
       <button className="update-dismiss" aria-label="Dismiss update notice" onClick={onDismiss}>×</button>
@@ -2214,8 +2238,12 @@ export default function Home() {
     setUpdateStatus(result);
   }, [api]);
   const openUpdate = useCallback(async () => {
-    if (!api || !updateStatus?.releaseUrl) return;
-    await api.openUpdate(updateStatus.releaseUrl);
+    if (!api || !updateStatus) return;
+    if (updateStatus.phase === "downloaded") {
+      await api.installUpdate();
+      return;
+    }
+    if (updateStatus.releaseUrl) await api.openUpdate(updateStatus.releaseUrl);
   }, [api, updateStatus]);
 
   useEffect(() => {
@@ -2223,6 +2251,13 @@ export default function Home() {
     api.getAppInfo().then(setAppInfo).catch(() => undefined);
     checkUpdates().catch(() => undefined);
   }, [api, checkUpdates]);
+  useEffect(() => {
+    if (!api) return;
+    return api.onUpdateStatus((status) => {
+      setUpdateStatus(status);
+      setUpdateDismissed(false);
+    });
+  }, [api]);
   function openModal(kind: "item" | "pal" | "message", id = "") {
     setPresetId(id);
     setModal(kind);

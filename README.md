@@ -8,9 +8,10 @@ single-player worlds.
 **New to Palkeep?** Read the [easy user guide](USER_GUIDE.md), including the
 step-by-step instructions for activating the single-player live bridge.
 
-Palkeep checks GitHub Releases when the desktop app starts. The installed
-version and Beta build are shown in the sidebar and About window, and a notice
-appears when a newer build is available.
+Palkeep checks GitHub Releases when the desktop app starts, downloads newer
+Beta builds in the background, and prompts when the update is ready to install.
+Downloaded updates install when Palkeep restarts or closes. The installed
+version and Beta build are shown in the sidebar and About window.
 
 ## Modes
 
