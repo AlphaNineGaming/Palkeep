@@ -191,10 +191,10 @@ const playerColors = [
   "#6f98b3",
   "#b6898f",
 ];
-const PALKEEP_VERSION = "0.6.5-beta.4";
+const PALKEEP_VERSION = "0.6.6-beta";
 const DEFAULT_APP_INFO: AppInfo = {
   version: PALKEEP_VERSION,
-  build: "beta.4",
+  build: "beta",
   channel: "Beta",
   packaged: false,
 };
