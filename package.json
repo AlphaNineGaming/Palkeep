@@ -14,12 +14,11 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
-    "build": "vinext build",
-    "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate",
+    "dev": "vite --config desktop/vite.config.ts",
+    "build": "npm run desktop:build-ui",
+    "start": "electron .",
+    "test": "npm run desktop:build-ui && node --test tests/rendered-html.test.mjs",
+    "lint": "eslint . --ignore-pattern desktop-dist --ignore-pattern installer-output",
     "desktop:build-ui": "vite build --config desktop/vite.config.ts",
     "desktop:run": "npm run desktop:build-ui && electron .",
     "prepare:single-player": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-single-player.ps1",
@@ -29,30 +28,22 @@
     "build:win": "npm run prepare:native && npm run verify:supply-chain && npm run desktop:build-ui && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
-    "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
     "electron": "38.3.0",
     "electron-builder": "26.0.12",
-    "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "vinext": "0.0.50",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "typescript-eslint": "8.59.3",
+    "vite": "8.0.13"
   },
   "type": "module",
   "build": {

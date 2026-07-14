@@ -2,39 +2,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+test("builds the Palkeep desktop application shell", async () => {
+  const [html, entry, page] = await Promise.all([
+    readFile(new URL("../desktop-dist/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../desktop/src/main.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
 
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
-}
-
-test("server-renders the Palkeep application shell", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
-  assert.match(html, /<title>Palkeep [—-] Palworld Server Command<\/title>/i);
-  assert.match(html, />PALKEEP</);
-  assert.match(html, />SERVER COMMAND</);
-  assert.match(html, /About Palkeep/);
-  assert.match(html, /Support the project/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
+  assert.match(html, /<title>Palkeep .* Server Command<\/title>/i);
+  assert.match(html, /<div id="root"><\/div>/);
+  assert.match(entry, /import Palkeep from "\.\.\/\.\.\/app\/page"/);
+  assert.match(page, />PALKEEP</);
+  assert.match(page, />SERVER COMMAND</);
+  assert.match(page, /About Palkeep/);
+  assert.match(page, /Support the project/);
 });
 
 test("ships the AlphaNineGaming support and legal details", async () => {

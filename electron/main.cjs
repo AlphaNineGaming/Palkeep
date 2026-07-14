@@ -151,7 +151,9 @@ function publicConfig() {
 }
 
 function writeConfig(input = {}) {
-  const { restPassword, bridgeToken, hasRestPassword, hasBridgeToken, ...plain } = input;
+  const { restPassword, bridgeToken, ...plain } = input;
+  delete plain.hasRestPassword;
+  delete plain.hasBridgeToken;
   const next = { ...readConfig(), ...plain };
   next.pollIntervalMs = Math.max(2000, Math.min(60000, Number(next.pollIntervalMs) || 5000));
   writeJson(userFile("config.json"), next);
