@@ -60,6 +60,33 @@ test("keeps weapons complete and easy to discover", async () => {
   assert.match(page, /weapon weapons gun guns firearm firearms melee ranged/);
 });
 
+test("offers optimized Pal build presets with complete bridge payloads", async () => {
+  const [page, main, rawPassives] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../electron/main.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/data/palworld-passives.json", import.meta.url), "utf8"),
+  ]);
+  const passiveIds = new Set(JSON.parse(rawPassives).map((passive) => passive.id));
+  const presetPassiveIds = [
+    "CraftSpeed_up3", "CraftSpeed_up2", "PAL_CorporateSlave", "Nocturnal",
+    "PAL_ALLAttack_up3", "Noukin", "CoolTimeReduction_Up_1", "Legend",
+    "Deffence_up3", "MutationPal_Immortal", "MoveSpeed_up_3", "Stamina_Up_3",
+    "Test_PalEgg_HatchingSpeed_Up", "MutationPal_Babysitter", "Rare",
+  ];
+
+  assert.match(page, /Best worker/);
+  assert.match(page, /Best fighter/);
+  assert.match(page, /Defensive tank/);
+  assert.match(page, /Fast mount/);
+  assert.match(page, /Breeding specialist/);
+  assert.match(page, /Balanced all-rounder/);
+  for (const id of presetPassiveIds) {
+    assert.ok(passiveIds.has(id), `preset uses unknown passive ${id}`);
+  }
+  assert.match(main, /passives: action\.passives/);
+  assert.match(main, /talentAttack: Number\(action\.talentAttack\)/);
+});
+
 test("checks for Beta updates and displays the installed build", async () => {
   const [page, main, preload, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

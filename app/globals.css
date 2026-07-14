@@ -107,3 +107,12 @@ button { cursor:pointer; }
 .filter-chips button span{display:inline-block;min-width:18px;margin-left:5px;padding-left:5px;border-left:1px solid #ddd5c8;color:#a59b8c;font:6px var(--font-geist-mono)}
 .filter-chips button.active span{border-color:#55564f;color:#d9c49d}
 @media(max-width:760px){.item-picker-tools{grid-template-columns:1fr}}
+
+/* Pal build presets */
+.pal-preset-panel{display:grid;grid-template-columns:210px 1fr;gap:10px;align-items:end;border:1px solid #d8cbe0;background:linear-gradient(135deg,#f3edf6,#faf7ef);border-radius:7px;padding:10px;margin:3px 0 9px}
+.pal-preset-panel label{margin:0}
+.pal-preset-panel>div{min-height:31px;padding:2px 0}
+.pal-preset-panel b,.pal-preset-panel small{display:block}
+.pal-preset-panel b{font-size:9px;color:#665071}
+.pal-preset-panel small{font-size:7px;color:#8e8491;line-height:1.45;margin-top:3px}
+@media(max-width:760px){.pal-preset-panel{grid-template-columns:1fr}}

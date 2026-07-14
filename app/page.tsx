@@ -228,9 +228,67 @@ type CatalogPal = {
   work: { name: string; level: number }[];
 };
 type Passive = { id: string; name: string; rank: number; description: string };
+type PalBuildPreset = {
+  id: string;
+  name: string;
+  summary: string;
+  passives: [string, string, string, string];
+  rank: number;
+  talents: { hp: number; attack: number; defense: number };
+};
 const fullItemCatalog = itemCatalogData as CatalogItem[];
 const fullPalCatalog = palCatalogData as CatalogPal[];
 const fullPassiveCatalog = passiveCatalogData as Passive[];
+const PAL_BUILD_PRESETS: PalBuildPreset[] = [
+  {
+    id: "worker",
+    name: "Best worker",
+    summary: "Maximum work speed with all-night production.",
+    passives: ["CraftSpeed_up3", "CraftSpeed_up2", "PAL_CorporateSlave", "Nocturnal"],
+    rank: 5,
+    talents: { hp: 100, attack: 100, defense: 100 },
+  },
+  {
+    id: "fighter",
+    name: "Best fighter",
+    summary: "High attack, shorter skill cooldowns, and strong all-round combat stats.",
+    passives: ["PAL_ALLAttack_up3", "Noukin", "CoolTimeReduction_Up_1", "Legend"],
+    rank: 5,
+    talents: { hp: 100, attack: 100, defense: 100 },
+  },
+  {
+    id: "tank",
+    name: "Defensive tank",
+    summary: "Survivability, regeneration, defense, and reduced hunger.",
+    passives: ["Deffence_up3", "Deffence_up2", "MutationPal_Immortal", "PAL_FullStomach_Down_3"],
+    rank: 5,
+    talents: { hp: 100, attack: 70, defense: 100 },
+  },
+  {
+    id: "mount",
+    name: "Fast mount",
+    summary: "Maximum travel speed with extra mount stamina.",
+    passives: ["MoveSpeed_up_3", "MoveSpeed_up_2", "MoveSpeed_up_1", "Stamina_Up_3"],
+    rank: 5,
+    talents: { hp: 100, attack: 100, defense: 100 },
+  },
+  {
+    id: "breeding",
+    name: "Breeding specialist",
+    summary: "Faster breeding and incubation with better SAN and hunger efficiency.",
+    passives: ["Test_PalEgg_HatchingSpeed_Up", "MutationPal_Babysitter", "PAL_Sanity_Down_2", "PAL_FullStomach_Down_2"],
+    rank: 5,
+    talents: { hp: 100, attack: 100, defense: 100 },
+  },
+  {
+    id: "balanced",
+    name: "Balanced all-rounder",
+    summary: "A flexible mix of combat, work speed, movement, and cooldown reduction.",
+    passives: ["Rare", "Legend", "CraftSpeed_up2", "CoolTimeReduction_Up_1"],
+    rank: 5,
+    talents: { hp: 100, attack: 100, defense: 100 },
+  },
+];
 const itemCategoryPriority = [
   "Weapon", "Armor", "Accessory", "Food", "Consumable", "Material",
   "Glider", "Sphere Modifier", "Pal Weapon", "Essential", "Other",
@@ -764,6 +822,26 @@ function PalPicker({ initialId = "" }: { initialId?: string }) {
 }
 
 function PalCreationFields({ initialId = "" }: { initialId?: string }) {
+  const [presetId, setPresetId] = useState("");
+  const [passives, setPassives] = useState(["", "", "", ""]);
+  const [rank, setRank] = useState(1);
+  const [talents, setTalents] = useState({ hp: 50, attack: 50, defense: 50 });
+  const selectedPreset = PAL_BUILD_PRESETS.find((preset) => preset.id === presetId);
+
+  function applyPreset(nextId: string) {
+    setPresetId(nextId);
+    const preset = PAL_BUILD_PRESETS.find((entry) => entry.id === nextId);
+    if (!preset) return;
+    setPassives([...preset.passives]);
+    setRank(preset.rank);
+    setTalents({ ...preset.talents });
+  }
+
+  function changePassive(index: number, value: string) {
+    setPresetId("custom");
+    setPassives((current) => current.map((passive, slot) => slot === index ? value : passive));
+  }
+
   return (
     <>
       <PalPicker initialId={initialId} />
@@ -796,6 +874,24 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
           />
         </label>
       </div>
+      <div className="pal-preset-panel">
+        <label>
+          Build preset
+          <select value={presetId} onChange={(event) => applyPreset(event.target.value)}>
+            <option value="">Choose a preset...</option>
+            <option value="custom" disabled>Custom selection</option>
+            {PAL_BUILD_PRESETS.map((preset) => (
+              <option value={preset.id} key={preset.id}>{preset.name}</option>
+            ))}
+          </select>
+        </label>
+        <div>
+          <b>{selectedPreset?.name || "Start with a proven build"}</b>
+          <small>
+            {selectedPreset?.summary || "A preset fills all four traits, condensation, and talent values. You can change anything afterward."}
+          </small>
+        </div>
+      </div>
       <details className="pal-advanced">
         <summary>
           Traits and advanced stats <span>Optional</span>
@@ -804,7 +900,11 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
           {[1, 2, 3, 4].map((index) => (
             <label key={index}>
               Passive trait {index}
-              <select name={`passive${index}`} defaultValue="">
+              <select
+                name={`passive${index}`}
+                value={passives[index - 1]}
+                onChange={(event) => changePassive(index - 1, event.target.value)}
+              >
                 <option value="">None</option>
                 {fullPassiveCatalog.map((passive) => (
                   <option value={passive.id} key={passive.id}>
@@ -819,7 +919,14 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
         <div className="form-row pal-stats">
           <label>
             Condensation
-            <select name="rank" defaultValue="1">
+            <select
+              name="rank"
+              value={rank}
+              onChange={(event) => {
+                setPresetId("custom");
+                setRank(Number(event.target.value));
+              }}
+            >
               {[1, 2, 3, 4, 5].map((rank) => (
                 <option value={rank} key={rank}>
                   Rank {rank}
@@ -834,7 +941,11 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
               type="number"
               min="0"
               max="100"
-              defaultValue="50"
+              value={talents.hp}
+              onChange={(event) => {
+                setPresetId("custom");
+                setTalents((current) => ({ ...current, hp: Number(event.target.value) }));
+              }}
             />
           </label>
           <label>
@@ -844,7 +955,11 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
               type="number"
               min="0"
               max="100"
-              defaultValue="50"
+              value={talents.attack}
+              onChange={(event) => {
+                setPresetId("custom");
+                setTalents((current) => ({ ...current, attack: Number(event.target.value) }));
+              }}
             />
           </label>
           <label>
@@ -854,7 +969,11 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
               type="number"
               min="0"
               max="100"
-              defaultValue="50"
+              value={talents.defense}
+              onChange={(event) => {
+                setPresetId("custom");
+                setTalents((current) => ({ ...current, defense: Number(event.target.value) }));
+              }}
             />
           </label>
         </div>

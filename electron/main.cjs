@@ -536,7 +536,18 @@ async function runAction(action = {}) {
       if (!playerId) throw new Error("Select a live player first.");
       const routes = {
         giveItem: [`/players/${playerId}/items`, { itemId: action.itemId, quantity: Number(action.quantity), destination: action.destination }],
-        addPal: [`/players/${playerId}/pals`, { speciesId: action.speciesId, level: Number(action.level), passive: action.passive }],
+        addPal: [`/players/${playerId}/pals`, {
+          speciesId: action.speciesId,
+          displayName: action.displayName,
+          gender: action.gender,
+          level: Number(action.level),
+          passive: action.passive,
+          passives: action.passives,
+          rank: Number(action.rank),
+          talentHp: Number(action.talentHp),
+          talentAttack: Number(action.talentAttack),
+          talentDefense: Number(action.talentDefense),
+        }],
         teleport: [`/players/${playerId}/teleport`, { mode: action.mode || "to-admin" }],
         message: [`/players/${playerId}/message`, { message: String(action.message || "") }],
       };
