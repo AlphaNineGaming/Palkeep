@@ -18,6 +18,23 @@ test("builds the Palkeep desktop application shell", async () => {
   assert.match(page, /Support the project/);
 });
 
+test("embeds the Palkeep icon throughout the Windows installation", async () => {
+  const [packageJson, afterPack] = await Promise.all([
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/after-pack.cjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(packageJson, /"icon": "build\/icon\.ico"/);
+  assert.match(packageJson, /"afterPack": "scripts\/after-pack\.cjs"/);
+  assert.match(packageJson, /"signAndEditExecutable": false/);
+  assert.match(packageJson, /"installerIcon": "build\/icon\.ico"/);
+  assert.match(packageJson, /"uninstallerIcon": "build\/icon\.ico"/);
+  assert.match(packageJson, /"installerHeaderIcon": "build\/icon\.ico"/);
+  assert.match(packageJson, /"shortcutName": "Palkeep Server Command"/);
+  assert.match(afterPack, /electron-winstaller/);
+  assert.match(afterPack, /"--set-icon"/);
+  assert.match(afterPack, /AlphaNineGaming/);
+});
+
 test("ships the AlphaNineGaming support and legal details", async () => {
   const [page, readme, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -87,6 +104,59 @@ test("offers optimized Pal build presets with complete bridge payloads", async (
   assert.match(main, /talentAttack: Number\(action\.talentAttack\)/);
 });
 
+test("creates Panthalus with its rideable companion save variant", async () => {
+  const [saveAdapter, page, main, bridge] = await Promise.all([
+    readFile(new URL("../single-player/palkeep_save.py", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../electron/main.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../bridge/README.md", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(saveAdapter, /"KingWhale": "BOSS_KingWhale_otomo"/);
+  assert.match(saveAdapter, /return f"BOSS_\{species_id\}"/);
+  assert.match(
+    saveAdapter,
+    /parameter\["CharacterID"\]\["value"\] = save_species_id/,
+  );
+  assert.match(page, /Create as Boss \/ Alpha Pal/);
+  assert.match(page, /bossVariant: form\.get\("bossVariant"\) === "on"/);
+  assert.match(main, /bossVariant: Boolean\(action\.bossVariant\)/);
+  assert.match(bridge, /`bossVariant` requests the species' `BOSS_`\/Alpha companion form/);
+});
+
+test("filters Pal creation and database browsing by work skill", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /const workSkillOptions = Array\.from/);
+  assert.match(page, /Work skill/);
+  assert.match(page, /aria-label="Filter by work skill"/);
+  assert.match(page, /pal\.work\.some\(\(work\) => work\.name === workSkill\)/);
+  assert.match(page, /pal\.work\.some\(\(work\) => work\.name === workFilter\)/);
+  assert.match(page, /workSkillCounts\[skill\]/);
+  assert.doesNotMatch(page, /pal\.work\.slice\(0, 4\)/);
+  assert.match(page, /WORK SUITABILITY/);
+  assert.match(page, /No work suitability/);
+  assert.match(page, /b\.level - a\.level/);
+});
+
+test("expands the physical Palbox radius through the transparent live bridge", async () => {
+  const [page, main, lua, bridge] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../electron/main.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../live-bridge/runtime/ue4ss/Mods/PalkeepLive/Scripts/main.lua", import.meta.url), "utf8"),
+    readFile(new URL("../bridge/README.md", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Physical base radius/);
+  assert.match(page, /Reset to 35 m/);
+  assert.match(page, /may keep the blue boundary at its vanilla size/);
+  assert.match(main, /request\.action === "setBaseRadius"/);
+  assert.match(main, /sendLiveBridgeCommand\("set_base_range"/);
+  assert.match(lua, /model\.AreaRange = radiusCm/);
+  assert.match(lua, /BP_BuildObject_PalBoxV2_C/);
+  assert.match(lua, /base-range\.json/);
+  assert.match(bridge, /`set_base_range`/);
+});
+
 test("checks for Beta updates and displays the installed build", async () => {
   const [page, main, preload, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -109,7 +179,7 @@ test("checks for Beta updates and displays the installed build", async () => {
   assert.match(page, /Downloading automatically/);
   assert.match(page, /Restart to install now/);
   assert.match(page, /sidebar-build/);
-  assert.match(packageJson, /"version": "0\.6\.6-beta"/);
+  assert.match(packageJson, /"version": "0\.6\.7-beta"/);
   assert.match(packageJson, /"electron-updater": "6\.8\.9"/);
   assert.match(packageJson, /"provider": "github"/);
 });

@@ -87,6 +87,7 @@ type LiveBridgeStatus = {
   latestVersion: string;
   updateAvailable: boolean;
   players: string[];
+  baseRadiusMeters: number;
   error: string | null;
 };
 type AppInfo = {
@@ -195,7 +196,7 @@ const playerColors = [
   "#6f98b3",
   "#b6898f",
 ];
-const PALKEEP_VERSION = "0.6.6-beta";
+const PALKEEP_VERSION = "0.6.7-beta";
 const DEFAULT_APP_INFO: AppInfo = {
   version: PALKEEP_VERSION,
   build: "beta",
@@ -574,6 +575,18 @@ const workLabels: Record<string, string> = {
   Transport: "Transporting",
   MonsterFarm: "Farming",
 };
+const workSkillOptions = Array.from(
+  new Set(fullPalCatalog.flatMap((pal) => pal.work.map((work) => work.name))),
+).sort((a, b) =>
+  (workLabels[a] || a).localeCompare(workLabels[b] || b),
+);
+const workSkillCounts = Object.fromEntries(
+  workSkillOptions.map((skill) => [
+    skill,
+    fullPalCatalog.filter((pal) => pal.work.some((work) => work.name === skill))
+      .length,
+  ]),
+);
 function rarityLabel(rarity: number) {
   return rarity >= 20
     ? "Legendary"
@@ -623,6 +636,7 @@ function palFormPayload(form: FormData) {
     talentHp: Number(form.get("talentHp") || 50),
     talentAttack: Number(form.get("talentAttack") || 50),
     talentDefense: Number(form.get("talentDefense") || 50),
+    bossVariant: form.get("bossVariant") === "on",
   };
 }
 
@@ -751,18 +765,21 @@ function PalPicker({ initialId = "" }: { initialId?: string }) {
   const initial = fullPalCatalog.find((pal) => pal.id === initialId);
   const [query, setQuery] = useState(initial?.name || "");
   const [element, setElement] = useState("All");
+  const [workSkill, setWorkSkill] = useState("All");
   const [selectedId, setSelectedId] = useState(initialId);
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return fullPalCatalog.filter(
       (pal) =>
         (element === "All" || pal.elements.includes(element)) &&
+        (workSkill === "All" ||
+          pal.work.some((work) => work.name === workSkill)) &&
         (!needle ||
           `${pal.name} ${pal.id} ${pal.elements.join(" ")} ${pal.dex}`
             .toLowerCase()
             .includes(needle)),
     );
-  }, [query, element]);
+  }, [query, element, workSkill]);
   return (
     <div className="pal-picker">
       <div className="pal-picker-tools">
@@ -795,6 +812,23 @@ function PalPicker({ initialId = "" }: { initialId?: string }) {
               .map((value) => (
                 <option key={value}>{value}</option>
               ))}
+          </select>
+        </label>
+        <label>
+          Work skill
+          <select
+            value={workSkill}
+            onChange={(event) => {
+              setWorkSkill(event.target.value);
+              setSelectedId("");
+            }}
+          >
+            <option value="All">All work skills</option>
+            {workSkillOptions.map((skill) => (
+              <option value={skill} key={skill}>
+                {workLabels[skill] || skill} ({workSkillCounts[skill]})
+              </option>
+            ))}
           </select>
         </label>
       </div>
@@ -898,6 +932,15 @@ function PalCreationFields({ initialId = "" }: { initialId?: string }) {
           />
         </label>
       </div>
+      <label className="pal-boss-choice">
+        <input name="bossVariant" type="checkbox" />
+        <span className="boss-check">✓</span>
+        <span>
+          <b>Create as Boss / Alpha Pal</b>
+          <small>Uses the larger boss variant with its Alpha appearance and species data.</small>
+        </span>
+        <em>ALPHA</em>
+      </label>
       <div className="pal-preset-panel">
         <label>
           Build preset
@@ -1015,6 +1058,7 @@ function DatabaseView({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
+  const [workFilter, setWorkFilter] = useState("All");
   const [sort, setSort] = useState("index");
   const [limit, setLimit] = useState(120);
   const elements = useMemo(
@@ -1044,8 +1088,10 @@ function DatabaseView({
       .filter(
         (pal) =>
           (filter === "All" || pal.elements.includes(filter)) &&
+          (workFilter === "All" ||
+            pal.work.some((work) => work.name === workFilter)) &&
           (!needle ||
-            `${pal.name} ${pal.id} ${pal.dex} ${pal.elements.join(" ")} ${pal.description}`
+            `${pal.name} ${pal.id} ${pal.dex} ${pal.elements.join(" ")} ${pal.work.map((work) => workLabels[work.name] || work.name).join(" ")} ${pal.description}`
               .toLowerCase()
               .includes(needle)),
       )
@@ -1054,11 +1100,12 @@ function DatabaseView({
           ? b.rarity - a.rarity || (a.dex || 9999) - (b.dex || 9999)
           : (a.dex || 9999) - (b.dex || 9999) || a.name.localeCompare(b.name),
       );
-  }, [kind, query, filter, sort]);
-  useEffect(() => setLimit(120), [kind, query, filter, sort]);
+  }, [kind, query, filter, workFilter, sort]);
+  useEffect(() => setLimit(120), [kind, query, filter, workFilter, sort]);
   useEffect(() => {
     setQuery("");
     setFilter("All");
+    setWorkFilter("All");
     setSort("index");
   }, [kind]);
   return (
@@ -1083,7 +1130,7 @@ function DatabaseView({
           <span>{kind === "items" ? "KNOWN ITEMS" : "INGAME PALS"}</span>
         </div>
       </div>
-      <div className="database-toolbar panel">
+      <div className={`database-toolbar panel ${kind}`}>
         <label className="database-search">
           <span>⌕</span>
           <input
@@ -1110,6 +1157,20 @@ function DatabaseView({
             </button>
           ))}
         </div>
+        {kind === "pals" && (
+          <select
+            aria-label="Filter by work skill"
+            value={workFilter}
+            onChange={(event) => setWorkFilter(event.target.value)}
+          >
+            <option value="All">All work skills</option>
+            {workSkillOptions.map((skill) => (
+              <option value={skill} key={skill}>
+                {workLabels[skill] || skill} ({workSkillCounts[skill]})
+              </option>
+            ))}
+          </select>
+        )}
         <select value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="index">
             {kind === "items" ? "Name A–Z" : "Paldeck order"}
@@ -1178,12 +1239,28 @@ function DatabaseView({
                     </div>
                   </div>
                 )}
-                <div className="work-tags">
-                  {pal.work.slice(0, 4).map((work) => (
-                    <span key={work.name}>
-                      {workLabels[work.name] || work.name} {work.level}
-                    </span>
-                  ))}
+                <div className="work-suitability">
+                  <small>WORK SUITABILITY</small>
+                  <div className="work-tags">
+                    {pal.work.length ? (
+                      [...pal.work]
+                        .sort(
+                          (a, b) =>
+                            b.level - a.level ||
+                            (workLabels[a.name] || a.name).localeCompare(
+                              workLabels[b.name] || b.name,
+                            ),
+                        )
+                        .map((work) => (
+                          <span key={work.name}>
+                            {workLabels[work.name] || work.name}
+                            <b>Lv. {work.level}</b>
+                          </span>
+                        ))
+                    ) : (
+                      <span className="no-work">No work suitability</span>
+                    )}
+                  </div>
                 </div>
                 {onUse && (
                   <button onClick={() => onUse(pal.id)}>
@@ -1211,12 +1288,16 @@ function WorldSettingsView({
   settings,
   hasWorldOptions,
   busy,
+  liveBridge,
   onSave,
+  onSetBaseRadius,
 }: {
   settings: Record<string, string | number | boolean>;
   hasWorldOptions: boolean;
   busy: boolean;
+  liveBridge: LiveBridgeStatus;
   onSave: (changes: Record<string, string | number | boolean>) => Promise<void>;
+  onSetBaseRadius: (radiusMeters: number) => Promise<void>;
 }) {
   const initial = useMemo(
     () => Object.fromEntries(worldSettingCatalog.map((entry) => [entry.key, settings[entry.key] ?? entry.defaultValue])),
@@ -1225,7 +1306,9 @@ function WorldSettingsView({
   const [draft, setDraft] = useState<Record<string, string | number | boolean>>(initial);
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [baseRadius, setBaseRadius] = useState(liveBridge.baseRadiusMeters || 35);
   useEffect(() => setDraft(initial), [initial]);
+  useEffect(() => setBaseRadius(liveBridge.baseRadiusMeters || 35), [liveBridge.baseRadiusMeters]);
   const changed = worldSettingCatalog.filter((entry) => String(draft[entry.key]) !== String(initial[entry.key]));
   const visible = worldSettingCatalog.filter((entry) => {
     const matchesCategory = category === "All" || entry.category === category;
@@ -1263,6 +1346,22 @@ function WorldSettingsView({
       {!hasWorldOptions && (
         <div className="world-settings-warning">WorldOption.sav has not been created yet. Open this world’s settings in Palworld once and save them before editing here.</div>
       )}
+      <div className={`base-radius-panel panel ${liveBridge.connected ? "ready" : ""}`}>
+        <div className="base-radius-copy">
+          <span>LIVE BRIDGE · EXPERIMENTAL</span>
+          <h2>Physical base radius</h2>
+          <p>Expand the real Palbox build and work area and reapply it whenever your world loads. Palworld 1.0 may keep the blue boundary at its vanilla size even when the functional radius is larger.</p>
+        </div>
+        <div className="base-radius-control">
+          <div><strong>{baseRadius}</strong><span>METERS</span></div>
+          <input aria-label="Physical base radius" type="range" min="35" max="100" step="5" value={baseRadius} onChange={(event) => setBaseRadius(Number(event.target.value))} />
+          <div className="base-radius-actions">
+            <button disabled={busy || !liveBridge.connected || baseRadius === liveBridge.baseRadiusMeters} onClick={() => onSetBaseRadius(baseRadius)}>Apply live</button>
+            <button className="reset" disabled={busy || !liveBridge.connected || liveBridge.baseRadiusMeters === 35} onClick={() => onSetBaseRadius(35)}>Reset to 35 m</button>
+          </div>
+          <small>{liveBridge.connected ? baseRadius > 70 ? "Large ranges can increase Pal navigation and CPU load." : "Applied to every loaded base without rebuilding the Palbox." : "Start Palworld, enter the world, and wait for LIVE READY."}</small>
+        </div>
+      </div>
       <div className="settings-preset-bar panel">
         <div><b>Quick presets</b><small>Presets only change the draft until you apply.</small></div>
         {Object.entries(presets).map(([name, values]) => (
@@ -1343,9 +1442,10 @@ function SinglePlayerApp({
     connected: false,
     version: null,
     installedVersion: null,
-    latestVersion: "0.2.0",
+    latestVersion: "0.3.0",
     updateAvailable: false,
     players: [],
+    baseRadiusMeters: 35,
     error: null,
   });
   const [busy, setBusy] = useState(false);
@@ -1543,6 +1643,31 @@ function SinglePlayerApp({
       await openWorld(worldPath);
     } catch (e: any) {
       notify(e.message || "Could not save world settings", true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function setBaseRadius(radiusMeters: number) {
+    if (!api) return;
+    setBusy(true);
+    try {
+      const result = await api.runLiveBridgeAction({
+        action: "setBaseRadius",
+        radiusMeters,
+      });
+      await refreshLiveBridge();
+      addActivity(
+        radiusMeters === 35 ? "Base radius reset" : "Base radius expanded",
+        `${radiusMeters} meters · ${result?.data?.basesUpdated ?? 0} loaded base(s) updated`,
+        "blue",
+      );
+      notify(
+        radiusMeters === 35
+          ? "Base radius restored to vanilla"
+          : `Base radius expanded to ${radiusMeters} meters`,
+      );
+    } catch (e: any) {
+      notify(e.message || "Could not update the live base radius", true);
     } finally {
       setBusy(false);
     }
@@ -1779,7 +1904,9 @@ function SinglePlayerApp({
                 settings={snapshot.settings}
                 hasWorldOptions={snapshot.hasWorldOptions}
                 busy={busy}
+                liveBridge={liveBridge}
                 onSave={saveWorldSettings}
+                onSetBaseRadius={setBaseRadius}
               />
             ) : (
               <section className="single-empty panel">

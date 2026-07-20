@@ -1,6 +1,6 @@
 {
   "name": "palkeep-server-command",
-  "version": "0.6.6-beta",
+  "version": "0.6.7-beta",
   "description": "Palkeep desktop control center for Palworld dedicated servers.",
   "author": "AlphaNineGaming",
   "repository": {
@@ -60,6 +60,7 @@
       }
     ],
     "asar": false,
+    "afterPack": "scripts/after-pack.cjs",
     "directories": {
       "output": "installer-output"
     },
@@ -90,6 +91,10 @@
       "perMachine": false,
       "packElevateHelper": false,
       "allowElevation": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "shortcutName": "Palkeep Server Command",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "runAfterFinish": true

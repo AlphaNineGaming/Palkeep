@@ -20,7 +20,13 @@ private LAN interface only. Return JSON and use non-2xx responses with a JSON
 ## Mutations
 
 - `POST /v1/players/:playerId/items` with `{ "itemId", "quantity", "destination" }`
-- `POST /v1/players/:playerId/pals` with `{ "speciesId", "displayName", "gender", "level", "passive", "passives", "rank", "talentHp", "talentAttack", "talentDefense" }`. `passive` mirrors the first entry in `passives` for compatibility with older bridge builds.
+- `POST /v1/players/:playerId/pals` with `{ "speciesId", "displayName", "gender", "level", "passive", "passives", "rank", "talentHp", "talentAttack", "talentDefense", "bossVariant" }`. `bossVariant` requests the species' `BOSS_`/Alpha companion form. `passive` mirrors the first entry in `passives` for compatibility with older bridge builds.
+
+The bundled single-player live bridge also accepts the local IPC operation
+`set_base_range` with `{ "radius_cm": 3500..10000 }`. It updates the functional
+range of every loaded base, attempts to scale the Palbox boundary, and persists
+the selection so it can be reapplied on world load. Palworld 1.0 may retain the
+vanilla blue line even when the functional radius is larger.
 - `POST /v1/players/:playerId/teleport` with `{ "mode": "to-admin" }`
 - `POST /v1/players/:playerId/message` with `{ "message" }`
 

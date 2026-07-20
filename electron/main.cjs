@@ -6,7 +6,7 @@ const { promisify } = require("node:util");
 const { autoUpdater } = require("electron-updater");
 
 const execFileAsync = promisify(execFile);
-const LIVE_BRIDGE_VERSION = "0.2.0";
+const LIVE_BRIDGE_VERSION = "0.3.0";
 const PALKEEP_BUILD = "beta";
 const RELEASES_API = "https://api.github.com/repos/AlphaNineGaming/Palkeep/releases?per_page=10";
 const RELEASES_PAGE = "https://github.com/AlphaNineGaming/Palkeep/releases";
@@ -405,6 +405,7 @@ async function liveBridgeStatus(gamePath) {
     latestVersion: LIVE_BRIDGE_VERSION,
     updateAvailable: Boolean(installed && installedVersion !== LIVE_BRIDGE_VERSION),
     players: health?.data?.players || [],
+    baseRadiusMeters: Number(health?.data?.baseRadiusMeters) || 35,
     error,
   };
 }
@@ -683,6 +684,7 @@ async function runAction(action = {}) {
           talentHp: Number(action.talentHp),
           talentAttack: Number(action.talentAttack),
           talentDefense: Number(action.talentDefense),
+          bossVariant: Boolean(action.bossVariant),
         }],
         teleport: [`/players/${playerId}/teleport`, { mode: action.mode || "to-admin" }],
         message: [`/players/${playerId}/message`, { message: String(action.message || "") }],
@@ -770,6 +772,17 @@ ipcMain.handle("livebridge:install", async (_event, gamePath) => {
   return installLiveBridge(gamePath || discoverPalworldGame()?.gamePath);
 });
 ipcMain.handle("livebridge:action", async (_event, request = {}) => {
+  if (request.action === "setBaseRadius") {
+    const radiusMeters = Number(request.radiusMeters);
+    if (!Number.isFinite(radiusMeters) || radiusMeters < 35 || radiusMeters > 100) {
+      throw new Error("Base radius must be between 35 and 100 meters.");
+    }
+    const radiusCm = Math.round(radiusMeters * 100);
+    const response = await sendLiveBridgeCommand("set_base_range", { radius_cm: radiusCm });
+    writeJson(path.join(liveBridgeIpcRoot(), "base-range.json"), { radiusCm });
+    appendAudit({ state: "completed", action: "liveBridge:setBaseRadius", radiusMeters, radiusCm });
+    return response;
+  }
   if (request.action !== "giveItem") throw new Error("Unsupported live bridge operation.");
   const itemId = String(request.itemId || "");
   const quantity = Math.floor(Number(request.quantity));

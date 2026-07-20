@@ -31,6 +31,12 @@ from palworld_save_tools.paltypes import PALWORLD_CUSTOM_PROPERTIES, PALWORLD_TY
 
 
 ZERO_GUID = "00000000-0000-0000-0000-000000000000"
+# Some Paldeck IDs describe a species but are not the actual companion variant
+# used by the game when that Pal joins a player's party.  Saving the encounter
+# variant can produce a Pal that looks correct but has no usable partner skill.
+PAL_COMPANION_SPECIES_ALIASES = {
+    "KingWhale": "BOSS_KingWhale_otomo",
+}
 CUSTOM_PATHS = {
     ".worldSaveData.CharacterSaveParameterMap.Value.RawData",
     ".worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData",
@@ -452,7 +458,15 @@ def update_world_settings(world_value: str, changes: dict) -> dict:
     return {"ok": True, "action": "updateSettings", "settings": applied}
 
 
-def add_pal(world_value: str, player_uid: str | None, species_id: str, display_name: str, level: int, gender: str, passives: list[str], rank: int, talent_hp: int, talent_attack: int, talent_defense: int) -> dict:
+def pal_save_species_id(species_id: str, boss_variant: bool) -> str:
+    if species_id in PAL_COMPANION_SPECIES_ALIASES:
+        return PAL_COMPANION_SPECIES_ALIASES[species_id]
+    if boss_variant and not species_id.startswith("BOSS_"):
+        return f"BOSS_{species_id}"
+    return species_id
+
+
+def add_pal(world_value: str, player_uid: str | None, species_id: str, display_name: str, level: int, gender: str, passives: list[str], rank: int, talent_hp: int, talent_attack: int, talent_defense: int, boss_variant: bool = False) -> dict:
     if not species_id or len(species_id) > 128:
         raise ValueError("Choose a valid Pal species ID.")
     if level < 1 or level > 100:
@@ -464,6 +478,7 @@ def add_pal(world_value: str, player_uid: str | None, species_id: str, display_n
     if any(value < 0 or value > 100 for value in (talent_hp, talent_attack, talent_defense)):
         raise ValueError("Pal talents must be between 0 and 100.")
     passives = [str(value) for value in passives if value][:4]
+    save_species_id = pal_save_species_id(species_id, boss_variant)
     world = validate_world(world_value)
     gvas, save_type = load_sav(world / "Level.sav", CUSTOM_PROPERTIES)
     data = world_data(gvas)
@@ -478,7 +493,7 @@ def add_pal(world_value: str, player_uid: str | None, species_id: str, display_n
             owned.append((entry, parameter))
     if not owned:
         raise ValueError("No existing owned Pal is available as a safe save template.")
-    template, _ = next(((entry, parameter) for entry, parameter in owned if parameter.get("CharacterID", {}).get("value") == species_id), owned[0])
+    template, _ = next(((entry, parameter) for entry, parameter in owned if parameter.get("CharacterID", {}).get("value") == save_species_id), owned[0])
     clone = copy.deepcopy(template)
     raw = clone["value"]["RawData"]["value"]
     parameter = raw["object"]["SaveParameter"]["value"]
@@ -491,7 +506,7 @@ def add_pal(world_value: str, player_uid: str | None, species_id: str, display_n
     if "DebugName" in clone["key"]:
         clone["key"]["DebugName"]["value"] = display_name or species_id
     raw["group_id"] = player["groupId"]
-    parameter["CharacterID"]["value"] = species_id
+    parameter["CharacterID"]["value"] = save_species_id
     if "NickName" in parameter:
         parameter["NickName"]["value"] = display_name or species_id
     if "FilteredNickName" in parameter:
@@ -539,7 +554,7 @@ def add_pal(world_value: str, player_uid: str | None, species_id: str, display_n
             handles.append({"guid": "00000000-0000-0000-0000-000000000001", "instance_id": instance_id})
             break
     write_level(world, gvas, save_type)
-    return {"ok": True, "action": "addPal", "playerId": player["uid"], "speciesId": species_id, "level": level, "gender": chosen_gender, "passives": passives, "rank": rank, "talents": {"hp": talent_hp, "attack": talent_attack, "defense": talent_defense}, "slot": slot_index, "instanceId": instance_id}
+    return {"ok": True, "action": "addPal", "playerId": player["uid"], "speciesId": species_id, "saveSpeciesId": save_species_id, "bossVariant": boss_variant, "level": level, "gender": chosen_gender, "passives": passives, "rank": rank, "talents": {"hp": talent_hp, "attack": talent_attack, "defense": talent_defense}, "slot": slot_index, "instanceId": instance_id}
 
 
 def main() -> None:
@@ -552,7 +567,7 @@ def main() -> None:
     elif action == "giveItem":
         emit(give_item(request["worldPath"], request.get("playerId"), str(request.get("itemId", "")), int(request.get("quantity", 0)), request.get("mode", "add")))
     elif action == "addPal":
-        emit(add_pal(request["worldPath"], request.get("playerId"), str(request.get("speciesId", "")), str(request.get("displayName", "")), int(request.get("level", 1)), str(request.get("gender", "Random")), request.get("passives", []), int(request.get("rank", 1)), int(request.get("talentHp", 50)), int(request.get("talentAttack", 50)), int(request.get("talentDefense", 50))))
+        emit(add_pal(request["worldPath"], request.get("playerId"), str(request.get("speciesId", "")), str(request.get("displayName", "")), int(request.get("level", 1)), str(request.get("gender", "Random")), request.get("passives", []), int(request.get("rank", 1)), int(request.get("talentHp", 50)), int(request.get("talentAttack", 50)), int(request.get("talentDefense", 50)), request.get("bossVariant", False) is True))
     elif action == "updateSettings":
         emit(update_world_settings(request["worldPath"], request.get("settings", {})))
     else:
